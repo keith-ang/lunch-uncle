@@ -4,6 +4,7 @@ import {
   formatForecast,
   formatBusArrivals,
   haversineMetres,
+  formatPlaces,
 } from "../src/tools.js";
 
 test("formatForecast picks the requested area", () => {
@@ -54,4 +55,21 @@ test("haversineMetres measures CT Hub 2 to Lavender MRT at under 600 m", () => {
   const lavenderMrt = { latitude: 1.3073, longitude: 103.8631 };
   const distance = haversineMetres(ctHub2, lavenderMrt);
   assert.ok(distance > 400 && distance < 550, `got ${distance}`);
+});
+
+test("formatPlaces passes through whether each place is open now", () => {
+  const origin = { latitude: 1.3115, longitude: 103.8615 };
+  const location = { latitude: 1.3073, longitude: 103.8631 };
+  const places = formatPlaces(
+    [
+      { displayName: { text: "Open" }, location, currentOpeningHours: { openNow: true } },
+      { displayName: { text: "Closed" }, location, currentOpeningHours: { openNow: false } },
+      { displayName: { text: "No hours" }, location },
+    ],
+    origin,
+  );
+  assert.deepEqual(
+    places.map((p) => [p.name, p.open_now]),
+    [["Open", true], ["Closed", false], ["No hours", null]],
+  );
 });

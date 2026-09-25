@@ -135,10 +135,12 @@ async function findLunchPlaces({ query, open_now = false }, env) {
  * Shape Places API results into the fields Uncle needs.
  */
 export function formatPlaces(places, origin) {
-  return places.map(({ displayName, rating, location }) => ({
+  return places.map(({ displayName, rating, location, currentOpeningHours }) => ({
     name: displayName?.text ?? "Unnamed",
     rating: rating ?? null,
     distance_m: Math.round(haversineMetres(origin, location)),
+    // null means Places has no hours for this place, not that it is closed.
+    open_now: currentOpeningHours?.openNow ?? null,
   }));
 }
 
