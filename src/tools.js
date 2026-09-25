@@ -28,7 +28,7 @@ export const toolDefinitions = [
     function: {
       name: "find_lunch_places",
       description:
-        "Search for places to eat near CT Hub 2. Returns name, rating, distance and whether it is open now.",
+        "Search for places to eat near CT Hub 2. Returns name, rating, distance and open_now, which is true, false, or null when the opening hours are unknown.",
       parameters: {
         type: "object",
         properties: {
@@ -99,19 +99,7 @@ export async function executeTool(name, args, env) {
 // find_lunch_places
 // ---------------------------------------------------------------------------
 
-async function findLunchPlaces({ query, open_now = false }, env) {
-  const centre = { latitude: 1.3236, longitude: 103.9273 };
-
-  const body = {
-    textQuery: query,
-    includedType: "restaurant",
-    openNow: open_now,
-    pageSize: MAX_PLACES,
-    locationBias: {
-      circle: { center: centre, radius: SEARCH_RADIUS_METRES },
-    },
-  };
-
+async function findLunchPlaces(args, env) {
   const res = await fetch(PLACES_URL, {
     method: "POST",
     headers: {
@@ -120,7 +108,7 @@ async function findLunchPlaces({ query, open_now = false }, env) {
       "X-Goog-FieldMask":
         "places.id,places.displayName,places.location,places.rating,places.currentOpeningHours",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(buildPlacesRequest(args)),
   });
 
   if (!res.ok) {
@@ -128,17 +116,34 @@ async function findLunchPlaces({ query, open_now = false }, env) {
   }
 
   const data = await res.json();
-  return { places: formatPlaces(data.places ?? [], centre) };
+  return { places: formatPlaces(data.places ?? [], CT_HUB_2) };
+}
+
+/**
+ * Build the Places Text Search body, biased towards CT Hub 2.
+ */
+export function buildPlacesRequest({ query, open_now = false }) {
+  return {
+    textQuery: query,
+    includedType: "restaurant",
+    openNow: open_now,
+    pageSize: MAX_PLACES,
+    locationBias: {
+      circle: { center: CT_HUB_2, radius: SEARCH_RADIUS_METRES },
+    },
+  };
 }
 
 /**
  * Shape Places API results into the fields Uncle needs.
  */
 export function formatPlaces(places, origin) {
-  return places.map(({ displayName, rating, location }) => ({
+  return places.map(({ displayName, rating, location, currentOpeningHours }) => ({
     name: displayName?.text ?? "Unnamed",
     rating: rating ?? null,
     distance_m: Math.round(haversineMetres(origin, location)),
+    // null means Places has no hours for this place, not that it is closed.
+    open_now: currentOpeningHours?.openNow ?? null,
   }));
 }
 

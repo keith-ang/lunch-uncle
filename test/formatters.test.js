@@ -4,6 +4,9 @@ import {
   formatForecast,
   formatBusArrivals,
   haversineMetres,
+  formatPlaces,
+  buildPlacesRequest,
+  CT_HUB_2,
 } from "../src/tools.js";
 
 test("formatForecast picks the requested area", () => {
@@ -54,4 +57,38 @@ test("haversineMetres measures CT Hub 2 to Lavender MRT at under 600 m", () => {
   const lavenderMrt = { latitude: 1.3073, longitude: 103.8631 };
   const distance = haversineMetres(ctHub2, lavenderMrt);
   assert.ok(distance > 400 && distance < 550, `got ${distance}`);
+});
+
+test("buildPlacesRequest centres the search on CT Hub 2", () => {
+  const body = buildPlacesRequest({ query: "chicken rice", open_now: true });
+  assert.deepEqual(body.locationBias.circle.center, CT_HUB_2);
+  assert.equal(body.textQuery, "chicken rice");
+  assert.equal(body.openNow, true);
+});
+
+test("formatPlaces measures distance from the origin it is given", () => {
+  const lavenderMrt = { latitude: 1.3073, longitude: 103.8631 };
+  const [place] = formatPlaces(
+    [{ displayName: { text: "Near MRT" }, rating: 4.1, location: lavenderMrt }],
+    CT_HUB_2,
+  );
+  assert.equal(place.name, "Near MRT");
+  assert.ok(place.distance_m > 400 && place.distance_m < 550, `got ${place.distance_m}`);
+});
+
+test("formatPlaces passes through whether each place is open now", () => {
+  const origin = { latitude: 1.3115, longitude: 103.8615 };
+  const location = { latitude: 1.3073, longitude: 103.8631 };
+  const places = formatPlaces(
+    [
+      { displayName: { text: "Open" }, location, currentOpeningHours: { openNow: true } },
+      { displayName: { text: "Closed" }, location, currentOpeningHours: { openNow: false } },
+      { displayName: { text: "No hours" }, location },
+    ],
+    origin,
+  );
+  assert.deepEqual(
+    places.map((p) => [p.name, p.open_now]),
+    [["Open", true], ["Closed", false], ["No hours", null]],
+  );
 });
