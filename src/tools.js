@@ -28,7 +28,7 @@ export const toolDefinitions = [
     function: {
       name: "find_lunch_places",
       description:
-        "Search for places to eat near CT Hub 2. Returns name, rating, distance and whether it is open now.",
+        "Search for places to eat near CT Hub 2. Returns name, rating, distance and open_now, which is true, false, or null when the opening hours are unknown.",
       parameters: {
         type: "object",
         properties: {
@@ -138,10 +138,12 @@ export function buildPlacesRequest({ query, open_now = false }) {
  * Shape Places API results into the fields Uncle needs.
  */
 export function formatPlaces(places, origin) {
-  return places.map(({ displayName, rating, location }) => ({
+  return places.map(({ displayName, rating, location, currentOpeningHours }) => ({
     name: displayName?.text ?? "Unnamed",
     rating: rating ?? null,
     distance_m: Math.round(haversineMetres(origin, location)),
+    // null means Places has no hours for this place, not that it is closed.
+    open_now: currentOpeningHours?.openNow ?? null,
   }));
 }
 

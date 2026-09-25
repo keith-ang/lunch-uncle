@@ -75,3 +75,20 @@ test("formatPlaces measures distance from the origin it is given", () => {
   assert.equal(place.name, "Near MRT");
   assert.ok(place.distance_m > 400 && place.distance_m < 550, `got ${place.distance_m}`);
 });
+
+test("formatPlaces passes through whether each place is open now", () => {
+  const origin = { latitude: 1.3115, longitude: 103.8615 };
+  const location = { latitude: 1.3073, longitude: 103.8631 };
+  const places = formatPlaces(
+    [
+      { displayName: { text: "Open" }, location, currentOpeningHours: { openNow: true } },
+      { displayName: { text: "Closed" }, location, currentOpeningHours: { openNow: false } },
+      { displayName: { text: "No hours" }, location },
+    ],
+    origin,
+  );
+  assert.deepEqual(
+    places.map((p) => [p.name, p.open_now]),
+    [["Open", true], ["Closed", false], ["No hours", null]],
+  );
+});
